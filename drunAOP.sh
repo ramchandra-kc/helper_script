@@ -11,6 +11,7 @@ INCLUDE_LICENSE=0
 EXECUTABLES_FOLDER="/home/united/Work/AOPVers"
 PORT=8011
 ISLINUX=0
+OTHERARGS=""
 # linux/aop_linux_v24.1.zip"
 
 # Parse command-line arguments for version
@@ -38,8 +39,6 @@ case $i in
 
     --exeFolder=*)
     EXECUTABLES_FOLDER="${i#*=}"
-    echo "Executables folder ${EXECUTABLES_FOLDER}"
-    eval "cd \"${EXECUTABLES_FOLDER}\""
     shift # past argument=value
     ;;
 
@@ -61,12 +60,16 @@ case $i in
     ;;
 
     *)
-          # unknown option
+        OTHERARGS="${OTHERARGS} ${i//=/ }"
     ;;
 
 esac
 done
 
+echo "Executables folder ${EXECUTABLES_FOLDER}"
+eval "cd \"${EXECUTABLES_FOLDER}\""
+
+# echo "${OTHERARGS}"
 # Validate version number
 if [ -z "$VERSION" ]; then
     echo "Version number is required. Use --vd to specify the version."
@@ -131,6 +134,10 @@ if [ ! -z $PORT ]; then
 fi
 if [ $INCLUDE_LICENSE -eq 1 ]; then
     RUN_CMD="${RUN_CMD} --license \"${LICENSE_PATH}\""
+fi
+
+if [ ! -z $OTHERARGS ]; then
+    RUN_CMD="${RUN_CMD} ${OTHERARGS}"
 fi
 
 echo "Running ${RUN_CMD}"
