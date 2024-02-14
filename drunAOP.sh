@@ -1,130 +1,124 @@
-#!/bin/bash
+# ~/.bashrc: executed by bash(1) for non-login shells.
+# see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
+# for examples
 
-# Default values
-OS_TYPE=$(uname | tr '[:upper:]' '[:lower:]')
-OS_TYPE_FULL=""
-VERSION=""
-URL_BASE="https://s3-eu-west-1.amazonaws.com/apexofficeprint"
-EXECUTABLE="APEXOfficePrint" # Adjust this as necessary
-LICENSE_PATH="D:/Work/apexofficeprint/backend/aop_server/aop.license"
-INCLUDE_LICENSE=0
-EXECUTABLES_FOLDER=""
-PORT=8011
-# linux/aop_linux_v24.1.zip"
-
-# Parse command-line arguments for version
-for i in "$@"; do
-# echo $i
-case $i in
-    --vd=*)
-    VERSION="${i#*=}"
-    shift # past argument=value
-    ;;
-    --license)
-    INCLUDE_LICENSE=1
-    ;;
-
-    --license=*)
-    INCLUDE_LICENSE=1
-    LICENSE_PATH_TEMP="${i#*=}"
-    if [ LICENSE_PATH_TEMP != "" ]; then
-        echo "License Provided  ${LICENSE_PATH_TEMP}" 
-        LICENSE_PATH="${LICENSE_PATH_TEMP}"
-    fi
-    echo "License to use ${LICENSE_PATH}" 
-    shift # past argument=value
-    ;;
-
-    --exeFolder=*)
-    EXECUTABLES_FOLDER="${i#*=}"
-    echo "Executables folder ${EXECUTABLES_FOLDER}"
-    eval "cd \"${EXECUTABLES_FOLDER}\""
-    shift # past argument=value
-    ;;
-
-    -h)
-    echo "This script will help you download specific AOP version and run automatically on specied port."
-    echo "The available options are: "
-    echo "--vd              aop version to download and run (ex: --vd=24.1)"
-    echo "-p                Port number to start AOP." 
-    echo "--license         whether to include license or not. Path can be set here or in the default values of the script. (Ex: --license=<PathToLicense>)"
-    echo "--exeFolder       Folder to download the zip file. Path can be set here or in the default values of the script. (Ex: --exeFolder=\"<PathToDownloadZip>)\""
-    echo "-h                See help"   
-
-    shift # past argument=value
-    # past argument=value
-    ;;
-
-    -p=*)
-    PORT="${i#*=}"
-    ;;
-
-    *)
-          # unknown option
-    ;;
-
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
 esac
-done
 
-if [ INCLUDE_LICENSE ]; then
-    echo "License enabled"
-    # LICENSE_PATH=""
+# don't put duplicate lines or lines starting with space in the history.
+# See bash(1) for more options
+HISTCONTROL=ignoreboth
+
+# append to the history file, don't overwrite it
+shopt -s histappend
+
+# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
+HISTSIZE=1000
+HISTFILESIZE=2000
+
+# check the window size after each command and, if necessary,
+# update the values of LINES and COLUMNS.
+shopt -s checkwinsize
+
+# If set, the pattern "**" used in a pathname expansion context will
+# match all files and zero or more directories and subdirectories.
+#shopt -s globstar
+
+# make less more friendly for non-text input files, see lesspipe(1)
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
 fi
 
-# Validate version number
-if [ -z "$VERSION" ]; then
-    echo "Version number is required. Use --vd to specify the version."
-    exit 1
+# set a fancy prompt (non-color, unless we know we "want" color)
+case "$TERM" in
+    xterm-color|*-256color) color_prompt=yes;;
+esac
+
+# uncomment for a colored prompt, if the terminal has the capability; turned
+# off by default to not distract the user: the focus in a terminal window
+# should be on the output of commands, not on the prompt
+#force_color_prompt=yes
+
+if [ -n "$force_color_prompt" ]; then
+    if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
+	# We have color support; assume it's compliant with Ecma-48
+	# (ISO/IEC-6429). (Lack of such support is extremely rare, and such
+	# a case would tend to support setf rather than setaf.)
+	color_prompt=yes
+    else
+	color_prompt=
+    fi
 fi
 
-# Adjust OS_TYPE for folder naming
-if [ "$OS_TYPE" == "darwin" ]; then
-    OS_TYPE="mac"
-elif [ "$OS_TYPE" == "linux" ]; then
-    OS_TYPE="linux"
-    OS_TYPE_FULL="linux"
-    EXECUTABLE="APEXOfficePrintLinux64"
-
+if [ "$color_prompt" = yes ]; then
+    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 else
-    OS_TYPE="win"
-    OS_TYPE_FULL="windows"
-    EXECUTABLE="APEXOfficePrintWin64.exe"
+    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+fi
+unset color_prompt force_color_prompt
+
+# If this is an xterm set the title to user@host:dir
+case "$TERM" in
+xterm*|rxvt*)
+    PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
+    ;;
+*)
+    ;;
+esac
+
+# enable color support of ls and also add handy aliases
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    #alias dir='dir --color=auto'
+    #alias vdir='vdir --color=auto'
+
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
 fi
 
-FOLDER="v${VERSION}"
+# colored GCC warnings and errors
+#export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 
-# Construct the URL dynamically based on OS and version
-URL="${URL_BASE}/${OS_TYPE_FULL}/aop_${OS_TYPE}_${FOLDER}.zip"
+# some more ls aliases
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
 
-# Check if folder exists
-if [ ! -d "$FOLDER" ]; then
-    echo "Folder does not exist. Downloading and extracting from $URL..."
+# Add an "alert" alias for long running commands.  Use like so:
+#   sleep 10; alert
+alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 
-    # Download the file
-    curl -o archive.zip "$URL" || wget "$URL" -O archive.zip
+# Alias definitions.
+# You may want to put all your additions into a separate file like
+# ~/.bash_aliases, instead of adding them here directly.
+# See /usr/share/doc/bash-doc/examples in the bash-doc package.
 
-    # Extract the file using 7zip
-    7z x archive.zip
-
-    # Cleanup the downloaded archive if needed
-    rm archive.zip
-
-else
-    echo "Folder $FOLDER exists. Skipping download."
+if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
 fi
 
-# Navigate to the certain folder if needed
-# Example: CD into the folder if it's not the current working directory
-cd "./${FOLDER}/server"
-cd "${EXECUTABLE}" || cd "${EXECUTABLE}_4096"
-# explorer .
-
-# Check if we need to set executable permissions and run the executable
-# This section might need adjustments based on actual executable presence and requirements
-if [ "$OS_TYPE" == "linux" ] || [ "$OS_TYPE" == "mac" ]; then
-    echo "Setting executable permissions for $EXECUTABLE..."
-    chmod u+x "$EXECUTABLE"
+# enable programmable completion features (you don't need to enable
+# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+# sources /etc/bash.bashrc).
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
 fi
-RUN_CMD="./${EXECUTABLE} -p ${PORT} --license \"${LICENSE_PATH}\""
-echo "Running ${RUN_CMD}"
-eval $RUN_CMD
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+#add 
+export PATH="/etc/profile.d:$PATH"
