@@ -1,0 +1,19 @@
+{
+  "name": "simple_format",
+  "version": "1.0.0",
+  "description": "Simple format invalid xml files.",
+  "main": "format.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "simple format",
+    "format invalid xml",
+    "invalid xml"
+  ],
+  "author": "ram",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^12.0.0"
+  }
+}
