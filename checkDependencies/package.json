@@ -1,0 +1,20 @@
+{
+  "name": "checkdependencies",
+  "version": "1.0.0",
+  "description": "Check if the dependencies installed are being used or not.",
+  "main": "checkDependencies.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "checkInstalledDependency",
+    "checkInstalledPackages",
+    "checkInstalledPackages",
+    "checkDependency"
+  ],
+  "author": "Ram",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^12.0.0"
+  }
+}
