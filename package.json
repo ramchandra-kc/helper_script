@@ -1,0 +1,11 @@
+{
+  "name": "helper_script",
+  "version": "1.0.0",
+  "description": "Collection of js scripts that could come handy",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ram",
+  "license": "ISC"
+}
