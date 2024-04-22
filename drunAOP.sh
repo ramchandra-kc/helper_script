@@ -6,13 +6,14 @@ OS_TYPE_FULL=""
 VERSION=""
 URL_BASE="https://s3-eu-west-1.amazonaws.com/apexofficeprint"
 EXECUTABLE="APEXOfficePrint" # Adjust this as necessary
-LICENSE_PATH="/home/united/Work/apexofficeprint/aop.license"
 INCLUDE_LICENSE=0
-EXECUTABLES_FOLDER="/home/united/Work/AOPVers"
-PORT=8011
 ISLINUX=0
-OTHERARGS=""
-# linux/aop_linux_v24.1.zip"
+
+# must change variables.
+EXECUTABLES_FOLDER="${pwd}" # folder where your executables should download.
+LICENSE_PATH="" # default licnense file path for the AOP.
+OTHERARGS="" # extra argument that should run (like -d or --enable_local_resource). Ex. (-d --enable_local_resource -p 8011)
+PORT=8011 # default port number for AOP( you can either use -p=8010).
 
 # Parse command-line arguments for version
 for i in "$@"; do
@@ -44,6 +45,7 @@ case $i in
 
     -h)
     echo "This script will help you download specific AOP version and run automatically on specied port."
+    echo "You must change the value for the EXECUTABLES_FOLDER variable. As this will be the folder that will have downloaded AOP version."
     echo "The available options are: "
     echo "--vd              aop version to download and run (ex: --vd=24.1)"
     echo "-p                Port number to start AOP."
