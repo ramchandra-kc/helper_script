@@ -12,7 +12,7 @@ ISLINUX=0
 # must change variables.
 EXECUTABLES_FOLDER="${pwd}" # folder where your executables should download.
 LICENSE_PATH="" # default licnense file path for the AOP.
-OTHERARGS="" # extra argument that should run (like -d or --enable_local_resource). Ex. (-d --enable_local_resource -p 8011)
+OTHERARGS=" --enable_local_resources " # extra argument that should run (like -d or --enable_local_resource). Ex. (-d --enable_local_resource -p 8011)
 PORT=8011 # default port number for AOP( you can either use -p=8010).
 
 # Parse command-line arguments for version
@@ -71,7 +71,12 @@ done
 echo "Executables folder ${EXECUTABLES_FOLDER}"
 eval "cd \"${EXECUTABLES_FOLDER}\""
 
-# echo "${OTHERARGS}"
+# Check if the directory change was successful
+if [ $? -ne 0 ]; then
+    echo "Failed to change directory to ${EXECUTABLES_FOLDER}. Exiting."
+    exit 1
+fi
+
 # Validate version number
 if [ -z "$VERSION" ]; then
     echo "Version number is required. Use --vd to specify the version."
@@ -119,7 +124,8 @@ fi
 
 # Navigate to the certain folder if needed
 # Example: CD into the folder if it's not the current working directory
-cd "./${FOLDER}/server"
+cd "./${FOLDER}"
+cd "/server"
 cd "${EXECUTABLE}" || cd "${EXECUTABLE}_4096"
 # explorer .
 # ls -la
