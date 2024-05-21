@@ -125,7 +125,7 @@ fi
 # Navigate to the certain folder if needed
 # Example: CD into the folder if it's not the current working directory
 cd "./${FOLDER}"
-cd "/server"
+cd "./server"
 cd "${EXECUTABLE}" || cd "${EXECUTABLE}_4096"
 # explorer .
 # ls -la
@@ -137,14 +137,14 @@ fi
 
 RUN_CMD="./${EXECUTABLE} "
 
-if [ ! -z $PORT ]; then
+if [ ! -z "$PORT" ]; then
     RUN_CMD="${RUN_CMD} -p ${PORT}"
 fi
 if [ $INCLUDE_LICENSE -eq 1 ]; then
     RUN_CMD="${RUN_CMD} --license \"${LICENSE_PATH}\""
 fi
 
-if [ ! -z $OTHERARGS ]; then
+if [ ! -z "$OTHERARGS" ]; then
     RUN_CMD="${RUN_CMD} ${OTHERARGS}"
 fi
 
