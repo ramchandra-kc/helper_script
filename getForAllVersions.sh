@@ -2,11 +2,11 @@
 
 # Versions to test, provided as comma-separated values
 VERSIONS="24.1.1,24.2,24.2.2"  # Example versions, replace with actual versions
-INPUT_DIR="data"
+INPUT="data"
 OUTPUT_DIR="out"
 INITIAL_PORT=8011
 GET_DIFF=true
-
+KILL_ALL=true
 # Function to display help message
 display_help() {
     echo "Usage: $0 [OPTIONS]"
@@ -15,12 +15,13 @@ display_help() {
     echo "Options:"
     echo "  -h, --help     Display this help message and exit"
     echo "  -v, --versions Comma-separated list of versions to process (default: $VERSIONS)"
-    echo "  -i, --input    Input directory (default: $INPUT_DIR)"
+    echo "  -i, --input    Input file or directory (default: $INPUT)"
     echo "  -o, --output   Output directory (default: $OUTPUT_DIR)"
     echo "  -p, --port     Initial port number (default: $INITIAL_PORT)"
     echo "  -d, --diff     Enable diff generation (default: $GET_DIFF)"
+    echo "  -k, --kill     Kill all AOP processes after processing (default: $KILL_ALL)"
     echo
-    echo "Example: $0 -v 24.1.1,24.2,24.2.2 -i data -o out -p 8011 -d true"
+    echo "Example: $0 -v 24.1.1,24.2,24.2.2 -i data -o out -p 8011 -d true -k true"
 }
 
 # Parse command-line arguments
@@ -35,7 +36,7 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         -i|--input)
-            INPUT_DIR="$2"
+            INPUT="$2"
             shift 2
             ;;
         -o|--output)
@@ -48,6 +49,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -d|--diff)
             GET_DIFF="$2"
+            shift 2
+            ;;
+        -k|--kill)
+            KILL_ALL="$2"
             shift 2
             ;;
         *)
@@ -93,12 +98,20 @@ check_server_version() {
   echo "Server version check failed for version $expected_version on port $port, but got $actual_version"
   return 0
 }
-# Check if INPUT_DIR is empty or doesn't exist
-if [ ! -d "$INPUT_DIR" ] || [ -z "$(ls -A "$INPUT_DIR")" ]; then
-    echo "Warning: Input directory is empty or doesn't exist. Exiting."
+
+# Check if INPUT is a file or directory
+if [ -f "$INPUT" ]; then
+    INPUT_FILES=("$INPUT")
+elif [ -d "$INPUT" ]; then
+    if [ -z "$(ls -A "$INPUT")" ]; then
+        echo "Warning: Input directory is empty. Exiting."
+        exit 1
+    fi
+    INPUT_FILES=("$INPUT"/*)
+else
+    echo "Error: Input '$INPUT' is neither a file nor a directory. Exiting."
     exit 1
 fi
-
 
 # Create output directory if it doesn't exist
 if [ ! -d "$OUTPUT_DIR" ]; then
@@ -134,15 +147,35 @@ for VERSION in "${VERSION_ARRAY[@]}"; do
     drunAOP.sh --vd="$VERSION" -p=$PORT &
     echo "Waiting for server to start..."
     sleep 8
+    retries=0
+    while [ $retries -lt 3 ]; do
+      if curl -s "http://localhost:$PORT/marco" > /dev/null; then
+        echo "Server started successfully"
+        SERVER_STARTED=true
+        break
+      else
+        echo "Attempt $((retries+1)): Server not responding. Waiting 5 more seconds..."
+        sleep 5
+        ((retries++))
+      fi
+    done
+
+    if ! $SERVER_STARTED; then
+      echo "Failed to start server after 3 attempts"
+    fi
   fi
 
-  # Iterate over each input file in the data directory
-  for INPUT_FILE in "$INPUT_DIR"/*; do
+  # Iterate over each input file
+  for INPUT_FILE in "${INPUT_FILES[@]}"; do
     # Extract the file name without the directory path
     INPUT_FILENAME=$(basename "$INPUT_FILE")
 
+    # Create a separate directory for each input file
+    FILE_OUTPUT_DIR="$OUTPUT_DIR/${INPUT_FILENAME%.*}"
+    mkdir -p "$FILE_OUTPUT_DIR"
+
     # Set the output file name
-    OUTPUT_FILE="$OUTPUT_DIR/${INPUT_FILENAME}_${VERSION}.pdf"
+    OUTPUT_FILE="$FILE_OUTPUT_DIR/${INPUT_FILENAME%.*}_${VERSION}.pdf"
 
     echo "Processing file: $INPUT_FILENAME"
     # Send the request using curl
@@ -168,8 +201,8 @@ for VERSION in "${VERSION_ARRAY[@]}"; do
         previous_version="${VERSION_ARRAY[previous_version_index]}"
         echo "Comparing current version ($VERSION) with previous version ($previous_version)"
         echo "Running diff-pdf command..."
-        diff-pdf "$OUTPUT_FILE" "$OUTPUT_DIR/${INPUT_FILENAME}_${previous_version}.pdf" --output-diff="$OUTPUT_DIR/${INPUT_FILENAME}_${VERSION}_vs_${previous_version}_diff.pdf"
-        echo "Diff-pdf command completed. Output saved to: $OUTPUT_DIR/${INPUT_FILENAME}_${VERSION}_vs_${previous_version}_diff.pdf"
+        diff-pdf "$OUTPUT_FILE" "$FILE_OUTPUT_DIR/${INPUT_FILENAME%.*}_${previous_version}.pdf" --output-diff="$FILE_OUTPUT_DIR/${INPUT_FILENAME%.*}_${VERSION}_vs_${previous_version}_diff.pdf"
+        echo "Diff-pdf command completed. Output saved to: $FILE_OUTPUT_DIR/${INPUT_FILENAME%.*}_${VERSION}_vs_${previous_version}_diff.pdf"
       else
         echo "No previous version found for comparison."
       fi
@@ -180,7 +213,9 @@ for VERSION in "${VERSION_ARRAY[@]}"; do
   done  
   echo "Finished processing version: $VERSION"
 done
-
-# kill_all_aop_processes
+  
+if $KILL_ALL; then
+  kill_all_aop_processes
+fi
 
 echo "All versions processed."
