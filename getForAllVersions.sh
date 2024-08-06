@@ -6,7 +6,8 @@ INPUT="data"
 OUTPUT_DIR="out"
 INITIAL_PORT=8011
 GET_DIFF=true
-KILL_ALL=true
+KILL_ALL_AOP_PROCESSES=true
+KILL_AOP_AFTER_PROCESSING=true
 # Function to display help message
 display_help() {
     echo "Usage: $0 [OPTIONS]"
@@ -19,9 +20,10 @@ display_help() {
     echo "  -o, --output   Output directory (default: $OUTPUT_DIR)"
     echo "  -p, --port     Initial port number (default: $INITIAL_PORT)"
     echo "  -d, --diff     Enable diff generation (default: $GET_DIFF)"
-    echo "  -k, --kill     Kill all AOP processes after processing (default: $KILL_ALL)"
+    echo "  -k, --kill     Kill all AOP processes after processing (default: $KILL_ALL_AOP_PROCESSES)"
+    echo "  -a, --after    Kill AOP processes after processing (default: $KILL_AOP_AFTER_PROCESSING)"
     echo
-    echo "Example: $0 -v 24.1.1,24.2,24.2.2 -i data -o out -p 8011 -d true -k true"
+    echo "Example: $0 -v 24.1.1,24.2,24.2.2 -i ./Exported.json -o out"
 }
 
 # Parse command-line arguments
@@ -52,7 +54,11 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         -k|--kill)
-            KILL_ALL="$2"
+            KILL_ALL_AOP_PROCESSES="$2"
+            shift 2
+            ;;
+        -a|--after)
+            KILL_AOP_AFTER_PROCESSING="$2"
             shift 2
             ;;
         *)
@@ -75,7 +81,7 @@ IFS=',' read -r -a VERSION_ARRAY <<< "$VERSIONS"
 echo "Starting processing for versions: $VERSIONS"
 
 # function to kill all AOP processes
-kill_all_aop_processes() {
+KILL_ALL_AOP_PROCESSESKILL_ALL_AOP_PROCESSES_aop_processes() {
   ps -a | grep APEXOfficePrint | awk '{print $1}' | xargs kill -9
 }
 
@@ -179,10 +185,45 @@ for VERSION in "${VERSION_ARRAY[@]}"; do
 
     echo "Processing file: $INPUT_FILENAME"
     # Send the request using curl
-    curl -X POST -H 'Content-Type: application/json' -d @"$INPUT_FILE" "http://localhost:$PORT/" > "$OUTPUT_FILE"
-    echo "Output saved to: $OUTPUT_FILE"
+
+  # detect the filetype of below curl response and update OUTPUT_FILE accordingly.
+    # Send the request using curl and save the response to a temporary file
+    TEMP_FILE=$(mktemp)
+    curl -X POST -H 'Content-Type: application/json' -d @"$INPUT_FILE" "http://localhost:$PORT/" > "$TEMP_FILE"
+
+    # Detect the file type using the 'file' command
+    FILE_TYPE=$(file -b --mime-type "$TEMP_FILE")
+
+    echo "File Type: $FILE_TYPE"
+
+    # Update the OUTPUT_FILE extension based on the detected file type
+    case "$FILE_TYPE" in
+        "application/pdf")
+            OUTPUT_FILE="${OUTPUT_FILE%.*}.pdf"
+            ;;
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+            OUTPUT_FILE="${OUTPUT_FILE%.*}.docx"
+            ;;
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation")
+            OUTPUT_FILE="${OUTPUT_FILE%.*}.pptx"
+            ;;
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            OUTPUT_FILE="${OUTPUT_FILE%.*}.xlsx"
+            ;;
+        *)
+            OUTPUT_FILE="${OUTPUT_FILE%.*}.bin"
+            ;;
+    esac
+
+    # Move the temporary file to the final output file
+    mv "$TEMP_FILE" "$OUTPUT_FILE"
+
+    echo "Output saved to: $OUTPUT_FILE (Detected file type: $FILE_TYPE)"
     
-    kill_specific_aop_version $VERSION
+    if $KILL_AOP_AFTER_PROCESSING; then
+      kill_specific_aop_version $VERSION
+      echo "Killed AOP processes after processing"
+    fi
 
     # if this is not the first version, compare the output with the previous version
     if [ "$VERSION" != "${VERSION_ARRAY[0]}" ]; then
@@ -196,8 +237,8 @@ for VERSION in "${VERSION_ARRAY[@]}"; do
           break
         fi
       done
-      # if GET_DIFF is true then only proceed 
-      if [ "$GET_DIFF" = true ] && [ $previous_version_index -ge 0 ]; then
+      # if GET_DIFF and output type is pdf then only proceed 
+      if [ "$GET_DIFF" = true ] && [ "$FILE_TYPE" = "application/pdf" ] && [ $previous_version_index -ge 0 ]; then
         previous_version="${VERSION_ARRAY[previous_version_index]}"
         echo "Comparing current version ($VERSION) with previous version ($previous_version)"
         echo "Running diff-pdf command..."
@@ -213,9 +254,9 @@ for VERSION in "${VERSION_ARRAY[@]}"; do
   done  
   echo "Finished processing version: $VERSION"
 done
-  
-if $KILL_ALL; then
-  kill_all_aop_processes
+
+if $KILL_ALL_AOP_PROCESSES; then
+  KILL_ALL_AOP_PROCESSESKILL_ALL_AOP_PROCESSES_aop_processes
 fi
 
 echo "All versions processed."
